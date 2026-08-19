@@ -2609,28 +2609,28 @@ Price: 65000 tk, Del: 2500"
         };
 
         const saveOrders = () => {
-          localStorage.setItem('homeaura_orders', JSON.stringify(orders.value));
+          localStorage.setItem("homeaura_orders", JSON.stringify(orders.value)); triggerAutoSync();
         };
         const saveDeletedOrders = () => {
-          localStorage.setItem('homeaura_deleted_orders', JSON.stringify(deletedOrders.value));
+          localStorage.setItem("homeaura_deleted_orders", JSON.stringify(deletedOrders.value)); triggerAutoSync();
         };
 
         const saveUsers = () => {
-          localStorage.setItem('homeaura_users', JSON.stringify(users.value));
+          localStorage.setItem("homeaura_users", JSON.stringify(users.value)); triggerAutoSync();
         };
 
         const saveCategories = () => {
-          localStorage.setItem('homeaura_categories', JSON.stringify(categories.value));
+          localStorage.setItem("homeaura_categories", JSON.stringify(categories.value)); triggerAutoSync();
         };
 
         const saveFactoryBills = () => {
-          localStorage.setItem('homeaura_factory_bills', JSON.stringify(factoryBills.value));
+          localStorage.setItem("homeaura_factory_bills", JSON.stringify(factoryBills.value)); triggerAutoSync();
         };
         const saveExpenses = () => {
-          localStorage.setItem('homeaura_expenses', JSON.stringify(expenses.value));
+          localStorage.setItem("homeaura_expenses", JSON.stringify(expenses.value)); triggerAutoSync();
         };
         const saveFactories = () => {
-          localStorage.setItem('homeaura_factories', JSON.stringify(factories.value));
+          localStorage.setItem("homeaura_factories", JSON.stringify(factories.value)); triggerAutoSync();
         };
 
         // --- DYNAMIC FACTORY PRIORITY ENGINE ---
@@ -3490,12 +3490,39 @@ Price: 65000 tk, Del: 2500"
         };
         
         let syncTimeout = null;
-        const triggerAutoSync = () => {
+        function triggerAutoSync() {
           if (!appsScriptUrl.value) return;
           if (syncTimeout) clearTimeout(syncTimeout);
           syncTimeout = setTimeout(() => {
             backupToGoogleSheets(true);
-          }, 5000); // 5 sec debounce
+          }, 500); // 0.5 sec debounce for near-instant push
+        };
+
+        const syncFromGoogleSheets = async () => {
+          if (!appsScriptUrl.value) return;
+          try {
+            const res = await fetch(appsScriptUrl.value);
+            const data = await res.json();
+            if (data && data.users && data.orders) {
+               users.value = data.users;
+               orders.value = data.orders;
+               deletedOrders.value = data.deletedOrders || [];
+               categories.value = data.categories || [];
+               factories.value = data.factories || [];
+               factoryBills.value = data.factoryBills || [];
+               expenses.value = data.expenses || [];
+               
+               localStorage.setItem('homeaura_users', JSON.stringify(users.value));
+               localStorage.setItem('homeaura_orders', JSON.stringify(orders.value));
+               localStorage.setItem('homeaura_deleted_orders', JSON.stringify(deletedOrders.value));
+               localStorage.setItem('homeaura_categories', JSON.stringify(categories.value));
+               localStorage.setItem('homeaura_factories', JSON.stringify(factories.value));
+               localStorage.setItem('homeaura_factory_bills', JSON.stringify(factoryBills.value));
+               localStorage.setItem('homeaura_expenses', JSON.stringify(expenses.value));
+            }
+          } catch(err) {
+             console.error("Silent Sync Read Error:", err);
+          }
         };
 
         const backupToGoogleSheets = async (isAuto = false) => {
@@ -3603,14 +3630,14 @@ Price: 65000 tk, Del: 2500"
                 factories.value = snapshot.factories || [];
                 factoryBills.value = snapshot.factoryBills || [];
                 expenses.value = snapshot.expenses || [];
-                localStorage.setItem('homeaura_factory_bills', JSON.stringify(factoryBills.value));
-                localStorage.setItem('homeaura_expenses', JSON.stringify(expenses.value));
+                localStorage.setItem("homeaura_factory_bills", JSON.stringify(factoryBills.value)); triggerAutoSync();
+                localStorage.setItem("homeaura_expenses", JSON.stringify(expenses.value)); triggerAutoSync();
                 
-                localStorage.setItem('homeaura_users', JSON.stringify(users.value));
-                localStorage.setItem('homeaura_orders', JSON.stringify(orders.value));
-                localStorage.setItem('homeaura_deleted_orders', JSON.stringify(deletedOrders.value));
-                localStorage.setItem('homeaura_categories', JSON.stringify(categories.value));
-                localStorage.setItem('homeaura_factories', JSON.stringify(factories.value));
+                localStorage.setItem("homeaura_users", JSON.stringify(users.value)); triggerAutoSync();
+                localStorage.setItem("homeaura_orders", JSON.stringify(orders.value)); triggerAutoSync();
+                localStorage.setItem("homeaura_deleted_orders", JSON.stringify(deletedOrders.value)); triggerAutoSync();
+                localStorage.setItem("homeaura_categories", JSON.stringify(categories.value)); triggerAutoSync();
+                localStorage.setItem("homeaura_factories", JSON.stringify(factories.value)); triggerAutoSync();
                 
                 alert('Snapshot restored successfully! The application will now reload to apply changes.');
                 window.location.reload();
@@ -3850,6 +3877,7 @@ Price: 65000 tk, Del: 2500"
         onMounted(() => {
           applyDarkMode();
           loadInitialData();
+          syncFromGoogleSheets();
           
           if (activeTab.value === 'dashboard') {
             Vue.nextTick(() => {
@@ -3858,13 +3886,12 @@ Price: 65000 tk, Del: 2500"
             });
           }
 
-          // Scheduled 6-hour auto-backup to Google Drive
+          // Real-time Database Polling
           setInterval(() => {
             if (appsScriptUrl.value) {
-              console.log('Initiating scheduled 6-hour backup...');
-              backupToGoogleSheets(true);
+              syncFromGoogleSheets();
             }
-          }, 6 * 60 * 60 * 1000);
+          }, 5000);
 
           window.addEventListener('paste', (e) => {
             if (!selectedProofTile.value) return;
