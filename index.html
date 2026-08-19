@@ -2377,7 +2377,7 @@ Price: 65000 tk, Del: 2500"
         const factories = ref([]);
         const factoryBills = ref([]);
         const expenses = ref([]);
-        const appsScriptUrl = ref(localStorage.getItem('homeaura_apps_script_url') || 'https://script.google.com/macros/s/AKfycbzLFNJ526V8Gaj_yLs4eGECgwo77VJ1yGPc5YBAg-F6Vx4Fql0M3BgMh4haLHO8NLhX/exec');
+        const appsScriptUrl = ref('https://script.google.com/macros/s/AKfycbzLFNJ526V8Gaj_yLs4eGECgwo77VJ1yGPc5YBAg-F6Vx4Fql0M3BgMh4haLHO8NLhX/exec');
         const isBackingUp = ref(false);
         const isTestingSync = ref(false);
         const syncStatusMsg = ref('');
@@ -3931,7 +3931,7 @@ Price: 65000 tk, Del: 2500"
             if (appsScriptUrl.value) {
               syncFromGoogleSheets();
             }
-          }, 2000);
+          }, 5000);
 
           window.addEventListener('paste', (e) => {
             if (!selectedProofTile.value) return;
