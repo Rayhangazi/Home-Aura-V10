@@ -1,10 +1,12 @@
 // ==========================================
-// HOMEAURA COMPLETE SMART SYNC SCRIPT
+// HOMEAURA COMPLETE SMART SYNC SCRIPT (V3)
 // ==========================================
 
 function doGet(e) {
+  // Add LockService to doGet to prevent reading while doPost is replacing sheets!
   var lock = LockService.getScriptLock();
   lock.waitLock(15000); 
+  
   try {
     var data = {
       users: sheetToObjects("users"),
@@ -17,6 +19,8 @@ function doGet(e) {
       timestamp: new Date().toISOString()
     };
     return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
   }
@@ -41,7 +45,6 @@ function doPost(e) {
     }
     
     // --- 2. SMART ADDITIVE MERGE ---
-    // This protects Admin A's changes from being wiped by Admin B.
     if (payloadObj.users) mergeObjectsById("users", payloadObj.users);
     if (payloadObj.orders) mergeObjectsById("orders", payloadObj.orders);
     if (payloadObj.deletedOrders) mergeObjectsById("deletedOrders", payloadObj.deletedOrders);
@@ -50,7 +53,6 @@ function doPost(e) {
     if (payloadObj.expenses) mergeObjectsById("expenses", payloadObj.expenses);
     
     if (payloadObj.categories) {
-       // Categories are a simple array of strings, so we replace them atomically
        var catObjs = payloadObj.categories.map(function(c) { return { name: c }; });
        objectsToSheetAtomic("categories", catObjs);
     }
@@ -61,7 +63,6 @@ function doPost(e) {
   } catch(err) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
   } finally {
-    // ALWAYS release the queue lock
     lock.releaseLock();
   }
 }
@@ -131,7 +132,6 @@ function objectsToSheetAtomic(sheetName, objects) {
   
   if (!objects || objects.length === 0) return;
   
-  // Extract headers
   var headersMap = {};
   objects.forEach(function(obj) {
     for (var key in obj) {
@@ -140,7 +140,6 @@ function objectsToSheetAtomic(sheetName, objects) {
   });
   var headers = Object.keys(headersMap);
   
-  // Create 2D array
   var rows = [headers];
   objects.forEach(function(obj) {
     var row = [];
@@ -152,12 +151,10 @@ function objectsToSheetAtomic(sheetName, objects) {
     rows.push(row);
   });
   
-  // Write atomically to prevent "blanking" while downloading
-  var tempSheet = ss.insertSheet("TEMP_" + sheetName + "_" + new Date().getTime());
-  tempSheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
-  
-  ss.deleteSheet(sheet);
-  tempSheet.setName(sheetName);
+  // Clear contents and set new values instead of deleting sheet 
+  // to prevent "Sheet not found" errors if references are held
+  sheet.clearContents();
+  sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
 }
 
 
@@ -179,7 +176,6 @@ function logHistory(payload) {
     lastHash = historySheet.getRange(lastRow, 2).getValue();
   }
   
-  // Only log if something actually changed
   if (hashString !== lastHash) {
     historySheet.appendRow([new Date().toISOString(), hashString, payloadString.length]);
   }
