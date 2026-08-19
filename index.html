@@ -2700,7 +2700,7 @@ Price: 65000 tk, Del: 2500"
         // --- AUTHENTICATION ---
         const handleLogin = () => {
           loginError.value = '';
-          const user = users.value.find(u => u.username === loginForm.username && u.password === loginForm.password);
+          const user = users.value.find(u => String(u.username) === String(loginForm.username) && String(u.password) === String(loginForm.password));
           if (!user) {
             loginError.value = 'Invalid username or password.';
             return;
@@ -3546,7 +3546,13 @@ Price: 65000 tk, Del: 2500"
                  users.value = data.users;
                  orders.value = data.orders;
                  deletedOrders.value = data.deletedOrders || [];
-                 categories.value = data.categories || [];
+                categories.value = (data.categories || []).map(c => {
+                   if (typeof c === 'object' && c !== null) {
+                     // Heal the mangled "0":"S","1":"o","2":"f","3":"a" object back to "Sofa"
+                     return Object.values(c).join('');
+                   }
+                   return c;
+                 });
                  factories.value = data.factories || [];
                  factoryBills.value = data.factoryBills || [];
                  expenses.value = data.expenses || [];
