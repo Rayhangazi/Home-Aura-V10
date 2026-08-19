@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   
   <!-- Tailwind CSS CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -388,19 +389,38 @@
               </div>
             </div>
 
-            <!-- Daily Sales Revenue Chart (Recharts Style) -->
-            <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
-                    Daily Sales Revenue (Current Month)
-                  </h3>
-                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Aggregated total amount logged per day.</p>
+            <!-- Charts Area -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <!-- Daily Sales Revenue Chart (Recharts Style) -->
+              <div class="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+                      Daily Sales Revenue (Current Month)
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Aggregated total amount logged per day.</p>
+                  </div>
+                </div>
+                <div class="w-full h-64 relative">
+                  <canvas id="revenueChartCanvas"></canvas>
                 </div>
               </div>
-              <div class="w-full h-64 relative">
-                <canvas id="revenueChartCanvas"></canvas>
+
+              <!-- Order Status Breakdown Pie Chart -->
+              <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <svg class="w-5 h-5 text-fuchsia-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                      Status Breakdown
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Order volume by status.</p>
+                  </div>
+                </div>
+                <div class="w-full h-64 relative flex justify-center">
+                  <canvas id="statusPieChartCanvas"></canvas>
+                </div>
               </div>
             </div>
             
@@ -1109,7 +1129,7 @@
                   Export Full Snapshot
                 </button>
                 <div class="relative">
-                  <input type="file" ref="importInput" accept=".json" @change="importSnapshot" class="hidden" />
+                  <input type="file" ref="importInput" accept=".json,.enc" @change="importSnapshot" class="hidden" />
                   <button @click="$refs.importInput.click()" class="px-5 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 text-xs font-extrabold rounded-xl transition-all shadow-sm flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Restore from Snapshot
@@ -2357,7 +2377,7 @@ Price: 65000 tk, Del: 2500"
         const factories = ref([]);
         const factoryBills = ref([]);
         const expenses = ref([]);
-        const appsScriptUrl = ref(localStorage.getItem('homeaura_apps_script_url') || 'https://script.google.com/macros/s/AKfycbxzLxjQ284rkgyOnp_ZwE6rYi6yPz9bx6xOFqqvs_LR35lSunJsr2YhhTJ2Ad7piS-ZKw/exec');
+        const appsScriptUrl = ref(localStorage.getItem('homeaura_apps_script_url') || '');
         const isBackingUp = ref(false);
         const isTestingSync = ref(false);
         const syncStatusMsg = ref('');
@@ -2543,11 +2563,6 @@ Price: 65000 tk, Del: 2500"
 
         // --- LOCAL STORAGE PERSISTENCE ---
         const loadInitialData = () => {
-          if (localStorage.getItem('homeaura_apps_script_url') === 'https://script.google.com/macros/s/AKfycbxsgTpnx6T-9sv2c5LmqJz8pvzLGp90KN3AwoIME_v2IzluNer0gKujGjlai7i9y5Rp9A/exec') {
-            localStorage.setItem('homeaura_apps_script_url', 'https://script.google.com/macros/s/AKfycbxzLxjQ284rkgyOnp_ZwE6rYi6yPz9bx6xOFqqvs_LR35lSunJsr2YhhTJ2Ad7piS-ZKw/exec');
-            appsScriptUrl.value = 'https://script.google.com/macros/s/AKfycbxzLxjQ284rkgyOnp_ZwE6rYi6yPz9bx6xOFqqvs_LR35lSunJsr2YhhTJ2Ad7piS-ZKw/exec';
-          }
-
           const storedUsers = localStorage.getItem('homeaura_users');
           let parsedUsrs = storedUsers ? JSON.parse(storedUsers) : null;
           if (!parsedUsrs || parsedUsrs.length === 0) parsedUsrs = defaultUsers;
@@ -3516,20 +3531,32 @@ Price: 65000 tk, Del: 2500"
         };
 
         const exportSnapshot = () => {
+          const password = prompt('Enter a password to encrypt this backup file (leave blank for no encryption):');
           const snapshot = {
             users: users.value,
             orders: orders.value,
             deletedOrders: deletedOrders.value,
             categories: categories.value,
             factories: factories.value,
-              factoryBills: factoryBills.value,
-              timestamp: new Date().toISOString()
+            factoryBills: factoryBills.value,
+            expenses: expenses.value,
+            timestamp: new Date().toISOString()
           };
-          const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+          let dataToExport = JSON.stringify(snapshot, null, 2);
+          let fileExt = 'json';
+          let mimeType = 'application/json';
+          
+          if (password) {
+            dataToExport = CryptoJS.AES.encrypt(dataToExport, password).toString();
+            fileExt = 'enc';
+            mimeType = 'text/plain';
+          }
+
+          const blob = new Blob([dataToExport], { type: mimeType });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `homeaura_snapshot_${new Date().toISOString().substring(0,10)}.json`;
+          a.download = `homeaura_snapshot_${new Date().toISOString().substring(0,10)}.${fileExt}`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -3548,7 +3575,26 @@ Price: 65000 tk, Del: 2500"
           const reader = new FileReader();
           reader.onload = (e) => {
             try {
-              const snapshot = JSON.parse(e.target.result);
+              let fileContent = e.target.result;
+              let snapshot;
+              
+              if (file.name.endsWith('.enc')) {
+                const password = prompt('This backup is encrypted. Please enter the password to decrypt:');
+                if (!password) {
+                  alert('Password is required to decrypt this file.');
+                  event.target.value = '';
+                  return;
+                }
+                const bytes = CryptoJS.AES.decrypt(fileContent, password);
+                const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
+                if (!decryptedData) {
+                  throw new Error('Incorrect password or corrupted file.');
+                }
+                snapshot = JSON.parse(decryptedData);
+              } else {
+                snapshot = JSON.parse(fileContent);
+              }
+
               if (snapshot.users && snapshot.orders) {
                 users.value = snapshot.users;
                 orders.value = snapshot.orders;
@@ -3616,6 +3662,8 @@ Price: 65000 tk, Del: 2500"
         };
 
         let chartInstance = null;
+        let pieChartInstance = null;
+
         const renderChart = () => {
           const canvas = document.getElementById('revenueChartCanvas');
           if (!canvas) return;
@@ -3690,21 +3738,112 @@ Price: 65000 tk, Del: 2500"
           });
         };
 
+        const renderPieChart = () => {
+          const canvas = document.getElementById('statusPieChartCanvas');
+          if (!canvas) return;
+
+          if (pieChartInstance) pieChartInstance.destroy();
+
+          const statusCounts = {};
+          orders.value.forEach(o => {
+            statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+          });
+
+          // Sort statuses by count descending
+          const sortedStatuses = Object.keys(statusCounts).sort((a, b) => statusCounts[b] - statusCounts[a]);
+          const data = sortedStatuses.map(status => statusCounts[status]);
+          
+          const isDark = document.body.classList.contains('dark');
+          const textColor = isDark ? '#94a3b8' : '#64748b';
+
+          // Assign distinct colors to statuses (matching our application theme)
+          const backgroundColors = sortedStatuses.map(status => {
+            if (status === 'Delivered') return isDark ? '#059669' : '#10b981'; // emerald
+            if (status === 'Pending') return isDark ? '#d97706' : '#f59e0b'; // amber
+            if (status === 'Processing') return isDark ? '#2563eb' : '#3b82f6'; // blue
+            if (status === 'Shipped') return isDark ? '#4f46e5' : '#6366f1'; // indigo
+            if (status === 'Returned Received') return isDark ? '#e11d48' : '#f43f5e'; // rose
+            if (status === 'Returned from Customer') return isDark ? '#be123c' : '#e11d48'; // rose darker
+            if (status === 'Partial Delivered') return isDark ? '#0891b2' : '#06b6d4'; // cyan
+            return isDark ? '#475569' : '#94a3b8'; // default slate
+          });
+
+          pieChartInstance = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+              labels: sortedStatuses,
+              datasets: [{
+                data: data,
+                backgroundColor: backgroundColors,
+                borderWidth: isDark ? 2 : 1,
+                borderColor: isDark ? '#0f172a' : '#ffffff',
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '65%',
+              animation: {
+                animateScale: true,
+                animateRotate: true,
+                duration: 1000,
+                easing: 'easeOutQuart'
+              },
+              plugins: {
+                legend: {
+                  position: 'right',
+                  labels: {
+                    color: textColor,
+                    usePointStyle: true,
+                    padding: 15,
+                    font: { size: 11, family: "'Inter', sans-serif" }
+                  }
+                },
+                tooltip: {
+                  backgroundColor: isDark ? '#1e293b' : '#fff',
+                  titleColor: isDark ? '#f8fafc' : '#0f172a',
+                  bodyColor: isDark ? '#cbd5e1' : '#475569',
+                  borderColor: isDark ? '#334155' : '#e2e8f0',
+                  borderWidth: 1,
+                  padding: 10,
+                  callbacks: {
+                    label: (context) => {
+                      const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                      const value = context.raw;
+                      const percentage = Math.round((value / total) * 100);
+                      return ` ${context.label}: ${value} (${percentage}%)`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+        };
+
         watch(orders, () => {
           if (activeTab.value === 'dashboard') {
-            Vue.nextTick(renderChart);
+            Vue.nextTick(() => {
+              renderChart();
+              renderPieChart();
+            });
           }
         }, { deep: true });
         
         watch(activeTab, (val) => {
           if (val === 'dashboard') {
-            Vue.nextTick(renderChart);
+            Vue.nextTick(() => {
+              renderChart();
+              renderPieChart();
+            });
           }
         });
         
         watch(isDarkMode, () => {
           if (activeTab.value === 'dashboard') {
-            Vue.nextTick(renderChart);
+            Vue.nextTick(() => {
+              renderChart();
+              renderPieChart();
+            });
           }
         });
 
@@ -3713,7 +3852,10 @@ Price: 65000 tk, Del: 2500"
           loadInitialData();
           
           if (activeTab.value === 'dashboard') {
-            Vue.nextTick(renderChart);
+            Vue.nextTick(() => {
+              renderChart();
+              renderPieChart();
+            });
           }
 
           // Scheduled 6-hour auto-backup to Google Drive
