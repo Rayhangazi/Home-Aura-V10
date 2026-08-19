@@ -1144,7 +1144,7 @@
                   You can push your system data directly to Google Sheets. To do this, go to Google Sheets > Extensions > Apps Script, paste the provided script, deploy it as a "Web App" (accessible to anyone), and paste the resulting URL below.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-2">
-                  <input v-model="appsScriptUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <input :value="appsScriptUrl" readonly disabled  type="url" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                   <button @click="saveAppsScriptUrl" class="px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all hover:bg-slate-700 dark:hover:bg-slate-600">
                     Save URL
                   </button>
@@ -2377,7 +2377,7 @@ Price: 65000 tk, Del: 2500"
         const factories = ref([]);
         const factoryBills = ref([]);
         const expenses = ref([]);
-        const appsScriptUrl = ref('https://script.google.com/macros/s/AKfycbzLFNJ526V8Gaj_yLs4eGECgwo77VJ1yGPc5YBAg-F6Vx4Fql0M3BgMh4haLHO8NLhX/exec');
+        const appsScriptUrl = ref('https://script.google.com/macros/s/AKfycbwz2ukzowfSJIDgywqTz4dZa_qNd1kmXKX1a380l8YIb_HnciGNkT5OaZFyoaRVb--c/exec');
         const isBackingUp = ref(false);
         const isTestingSync = ref(false);
         const syncStatusMsg = ref('');
@@ -3505,7 +3505,7 @@ Price: 65000 tk, Del: 2500"
             const testPayload = { _connectionTest: [{ timestamp: new Date().toISOString(), message: "Connection successful. System is online!" }] };
             await fetch(appsScriptUrl.value, {
               method: 'POST',
-              mode: 'no-cors',
+              
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
               body: JSON.stringify(testPayload)
             });
@@ -3584,7 +3584,7 @@ Price: 65000 tk, Del: 2500"
             };
             await fetch(appsScriptUrl.value, {
               method: 'POST',
-              mode: 'no-cors',
+              
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
               body: JSON.stringify(snapshot)
             });
