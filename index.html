@@ -1159,6 +1159,9 @@
                     Test Connection
                   </button>
                 </div>
+                <div v-if="lastSyncTimestamp" class="mt-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                  Last successful sync: {{ lastSyncTimestamp }}
+                </div>
                 <div v-if="syncStatusMsg" :class="syncStatusColor" class="mt-4 px-4 py-3 rounded-xl border text-[11px] font-bold flex items-center gap-2 transition-all">
                   <svg v-if="syncStatusColor.includes('emerald')" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   <svg v-else-if="syncStatusColor.includes('rose')" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -2419,6 +2422,7 @@ Price: 65000 tk, Del: 2500"
         const activeTab = ref('dashboard');
         const loginForm = reactive({ username: '', password: '' });
         const loginError = ref('');
+        const lastSyncTimestamp = ref('');
 
         // Filtering
         const orderSearch = ref('');
@@ -3564,6 +3568,8 @@ Price: 65000 tk, Del: 2500"
                  localStorage.setItem('homeaura_factories', JSON.stringify(factories.value));
                  localStorage.setItem('homeaura_factory_bills', JSON.stringify(factoryBills.value));
                  localStorage.setItem('homeaura_expenses', JSON.stringify(expenses.value));
+                 
+                 lastSyncTimestamp.value = new Date().toLocaleTimeString();
                }
             }
           } catch(err) {
@@ -4005,6 +4011,7 @@ Price: 65000 tk, Del: 2500"
           activeTab,
           loginForm,
           loginError,
+          lastSyncTimestamp,
           deletedOrders,
           selectedOrders,
           restoreOrder,
