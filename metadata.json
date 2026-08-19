@@ -1,0 +1,8 @@
+{
+  "name": "Remix HomeAura V10",
+  "description": "Order Management Portal for HomeAura",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
