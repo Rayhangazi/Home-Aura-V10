@@ -2377,7 +2377,7 @@ Price: 65000 tk, Del: 2500"
         const factories = ref([]);
         const factoryBills = ref([]);
         const expenses = ref([]);
-        const appsScriptUrl = ref(localStorage.getItem('homeaura_apps_script_url') || '');
+        const appsScriptUrl = ref(localStorage.getItem('homeaura_apps_script_url') || 'https://script.google.com/macros/s/AKfycbzLFNJ526V8Gaj_yLs4eGECgwo77VJ1yGPc5YBAg-F6Vx4Fql0M3BgMh4haLHO8NLhX/exec');
         const isBackingUp = ref(false);
         const isTestingSync = ref(false);
         const syncStatusMsg = ref('');
@@ -2501,15 +2501,45 @@ Price: 65000 tk, Del: 2500"
           const ext = (file.name ? file.name.split('.').pop() : 'png').toLowerCase();
 
           const fileName = `proof_${sellerUsername}_${cleanCn}_${dateStr}.${ext}`;
-          const relativePath = `proof_attachments/${fileName}`;
+          
+          if (targetObj === intakeForm) {
+             parseSuccessMsg.value = '⏳ Uploading screenshot to Google Drive... Please wait.';
+          }
 
           const reader = new FileReader();
-          reader.onload = (e) => {
-            targetObj.socialProofUrl = e.target.result;
-            targetObj.socialProofFileName = relativePath;
-            if (targetObj === intakeForm) {
-              parseSuccessMsg.value = '📸 Social media order proof screenshot attached successfully!';
-              setTimeout(() => { parseSuccessMsg.value = ''; }, 4000);
+          reader.onload = async (e) => {
+            const base64Data = e.target.result;
+            // Temporarily show the local image for instant feedback
+            targetObj.socialProofUrl = base64Data;
+            
+            if (!appsScriptUrl.value) {
+              if (targetObj === intakeForm) parseSuccessMsg.value = '⚠️ Proof attached locally (No Google Script URL set).';
+              return;
+            }
+
+            try {
+              const res = await fetch(appsScriptUrl.value, {
+                method: 'POST',
+                body: JSON.stringify({
+                  action: 'upload_image',
+                  filename: fileName,
+                  base64: base64Data
+                })
+              });
+              const result = await res.json();
+              if (result.status === 'success' && result.url) {
+                targetObj.socialProofUrl = result.url;
+                if (targetObj === intakeForm) {
+                  parseSuccessMsg.value = '✅ Screenshot securely uploaded to Google Drive!';
+                  setTimeout(() => { parseSuccessMsg.value = ''; }, 4000);
+                }
+                triggerAutoSync();
+              } else {
+                if (targetObj === intakeForm) parseSuccessMsg.value = '⚠️ Upload failed: ' + (result.error || 'Unknown error');
+              }
+            } catch(err) {
+              console.error("Upload Error:", err);
+              if (targetObj === intakeForm) parseSuccessMsg.value = '⚠️ Upload failed. Retained local copy.';
             }
           };
           reader.readAsDataURL(file);
@@ -3504,21 +3534,31 @@ Price: 65000 tk, Del: 2500"
             const res = await fetch(appsScriptUrl.value);
             const data = await res.json();
             if (data && data.users && data.orders) {
-               users.value = data.users;
-               orders.value = data.orders;
-               deletedOrders.value = data.deletedOrders || [];
-               categories.value = data.categories || [];
-               factories.value = data.factories || [];
-               factoryBills.value = data.factoryBills || [];
-               expenses.value = data.expenses || [];
-               
-               localStorage.setItem('homeaura_users', JSON.stringify(users.value));
-               localStorage.setItem('homeaura_orders', JSON.stringify(orders.value));
-               localStorage.setItem('homeaura_deleted_orders', JSON.stringify(deletedOrders.value));
-               localStorage.setItem('homeaura_categories', JSON.stringify(categories.value));
-               localStorage.setItem('homeaura_factories', JSON.stringify(factories.value));
-               localStorage.setItem('homeaura_factory_bills', JSON.stringify(factoryBills.value));
-               localStorage.setItem('homeaura_expenses', JSON.stringify(expenses.value));
+               // Prevent overwriting the local app with a blank Google Sheet
+               if (data.users.length === 0 && users.value.length > 0) {
+                 // The remote sheet is empty, but we have local data. Push to seed the sheet.
+                 triggerAutoSync();
+                 return;
+               }
+
+               // Only overwrite if the remote sheet has actual users
+               if (data.users.length > 0) {
+                 users.value = data.users;
+                 orders.value = data.orders;
+                 deletedOrders.value = data.deletedOrders || [];
+                 categories.value = data.categories || [];
+                 factories.value = data.factories || [];
+                 factoryBills.value = data.factoryBills || [];
+                 expenses.value = data.expenses || [];
+                 
+                 localStorage.setItem('homeaura_users', JSON.stringify(users.value));
+                 localStorage.setItem('homeaura_orders', JSON.stringify(orders.value));
+                 localStorage.setItem('homeaura_deleted_orders', JSON.stringify(deletedOrders.value));
+                 localStorage.setItem('homeaura_categories', JSON.stringify(categories.value));
+                 localStorage.setItem('homeaura_factories', JSON.stringify(factories.value));
+                 localStorage.setItem('homeaura_factory_bills', JSON.stringify(factoryBills.value));
+                 localStorage.setItem('homeaura_expenses', JSON.stringify(expenses.value));
+               }
             }
           } catch(err) {
              console.error("Silent Sync Read Error:", err);
@@ -3891,7 +3931,7 @@ Price: 65000 tk, Del: 2500"
             if (appsScriptUrl.value) {
               syncFromGoogleSheets();
             }
-          }, 5000);
+          }, 2000);
 
           window.addEventListener('paste', (e) => {
             if (!selectedProofTile.value) return;
